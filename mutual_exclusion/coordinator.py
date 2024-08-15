@@ -1,53 +1,25 @@
 import os
 import socket
 import threading
+from datetime import datetime
+from time import sleep
+
+from mutual_exclusion.socket import SocketHandler
 
 HOST = "localhost"
-PORT = 5000
+PORT = 1234
 
 MESSAGE_LENGTH = 10
-
 
 requests = []
 
 
-class MySocket:
-    def _init_(self, sock=None):
-        if sock is None:
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        else:
-            self.sock = sock
-
-    def connect(self, host=HOST, port=PORT):
-        self.sock.connect((host, port))
-
-    # def send(self, msg):
-    #    totalsent = 0
-    #    while totalsent < MSGLEN:
-    #        sent = self.sock.send(msg[totalsent:])
-    #        if sent == 0:
-    #            raise RuntimeError("socket connection broken")
-    #        totalsent = totalsent + sent
-
-    def receive(self):
-        msg = self.sock.recv(MESSAGE_LENGTH)
-        if msg == b"":
-            raise RuntimeError("socket connection broken")
-        return msg
-
-        chunks = []
-        bytes_recd = 0
-        while bytes_recd < MSGLEN:
-            chunk = self.sock.recv(min(MSGLEN - bytes_recd, 2048))
-            if chunk == b"":
-                raise RuntimeError("socket connection broken")
-            chunks.append(chunk)
-            bytes_recd = bytes_recd + len(chunk)
-        return b"".join(chunks)
-
-
 def write_line_to_result(line: str):
     """Região crítica do processo. Escreve uma linha para o arquivo resultado.txt"""
+
+    # TODO: quem deve escrever no arquivo é o processo, não o coordenador!
+    # O coordenador só deve coordenar a exclusão mútua entre os processos
+    # e salvar um log de todas as mensagens recebidas e enviadas
 
     with open("resultado.txt", "a") as f:
         f.writelines([line])
@@ -56,19 +28,45 @@ def write_line_to_result(line: str):
 def coordinator_thread():
     """Loop de execução da thread que coordena a exclusão mútua entre os processos"""
 
-    # GLAUCO: Essa thread deve ser criada dinamicamente para atender cada chamada!
+    # TODO: Essa thread deve ser criada dinamicamente para atender cada chamada!
 
-    line = "aaa"  # ???
-    write_line_to_result(line)
+    # Processo dorme por um tempo, e envia a mensagem REQUEST
+    # Aguarda até que o coordenador envie a mensagem GRANT
+    # Processo entra na região crítica, escreve e aguarda um tempo
+    # Processo envia a mensagem RELEASE
+
+    lock = threading.Lock()
+
+    # Acompanhar lista de requisições
+    while True:
+        if len(requests) > 0:
+            # Não precisa ter um lock aqui, pois o coordenador gerencia a exclusão mútua
+            request = requests.pop(0)
+            print("Processing request:", request)
 
 
 def process_listener_thread():
     """Loop de execução da thread que recebe novos processos"""
 
-    # socket = MySocket().connect()
+    s = socket.socket()  # Create a socket object
+    host = socket.gethostname()  # Get the local machine name
+    port = 12397  # Reserve a port for your service
+    s.bind(("", port))  # Bind to the port
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect(HOST, PORT)
+    s.listen(5)  # Wait for the client connection
+    while True:
+        c, addr = s.accept()  # Establish a connection with the client
+        print("Got connection from", addr)
+        c.send("Thank you for connecting!")
+
+        # Receber a mensagem do processo
+        message = c.recv(MESSAGE_LENGTH).decode("utf-8")
+        print("Received message:", message)
+
+        # Adicionar a mensagem à lista de requisições
+        requests.append(message)
+
+    c.close()
 
     while False:
         pass
@@ -84,7 +82,13 @@ def process_listener_thread():
 def ui_thread():
     """Loop de execução da thread de interface"""
 
-    pass
+    return
+
+    while True:
+        current_time = datetime.now()
+        current_time_ms = current_time.time()
+        print("UI thread running at", current_time_ms)
+        sleep(2)
 
 
 class CoordinatorThread(threading.Thread):
@@ -92,7 +96,7 @@ class CoordinatorThread(threading.Thread):
 
 
 def main():
-    print("ID of process running main program:", os.getpid())
+    print("Coordinator process spawned with ID:", os.getpid())
     print("Main thread name:", threading.current_thread().name)
 
     # t1 = threading.Thread(target=coordinator_thread, name='t1')
@@ -108,5 +112,5 @@ def main():
     t3.join()
 
 
-if __name__ == "_main_":
+if __name__ == "__main__":
     main()
