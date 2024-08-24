@@ -48,12 +48,41 @@ def coordinator_thread():
 def process_listener_thread():
     """Loop de execução da thread que recebe novos processos"""
 
+
+def server_program():
+    # get the hostname
+    host = socket.gethostname()
+    port = 5000  # initiate port no above 1024
+
+    server_socket = socket.socket()  # get instance
+    # look closely. The bind() function takes tuple as argument
+    server_socket.bind((host, port))  # bind host address and port together
+
+    # configure how many client the server can listen simultaneously
+    server_socket.listen(2)
+    conn, address = server_socket.accept()  # accept new connection
+    print("Connection from: " + str(address))
+    while True:
+        # receive data stream. it won't accept data packet greater than 1024 bytes
+        data = conn.recv(1024).decode()
+        if not data:
+            # if data is not received break
+            break
+        print("from connected user: " + str(data))
+        data = input(" -> ")
+        conn.send(data.encode())  # send data to the client
+
+    conn.close()  # close the connection
+
     s = socket.socket()  # Create a socket object
     host = socket.gethostname()  # Get the local machine name
     port = 12397  # Reserve a port for your service
-    s.bind(("", port))  # Bind to the port
+    s.bind((host, port))  # Bind to the port
 
-    s.listen(5)  # Wait for the client connection
+    s.listen(3)  # Wait for the client connection
+    conn, address = server_socket.accept()  # Establish connection with client.
+    print("Got connection from", address)
+
     while True:
         c, addr = s.accept()  # Establish a connection with the client
         print("Got connection from", addr)

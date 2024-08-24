@@ -1,4 +1,12 @@
+import os
+import random
 import socket
+from datetime import datetime
+from time import sleep
+
+from mutual_exclusion.util import WRITE_COUNT, MessageType, format_message
+
+PROCESS_ID = os.getpid()
 
 
 def client_program():
@@ -8,17 +16,52 @@ def client_program():
     client_socket = socket.socket()  # instantiate
     client_socket.connect((host, port))  # connect to the server
 
-    message = input(" -> ")  # take input
+    written_count = 0
 
-    while message.lower().strip() != "bye":
-        client_socket.send(message.encode())  # send message
-        data = client_socket.recv(1024).decode()  # receive response
+    print("Process started with ID:", PROCESS_ID)
 
-        print("Received from server: " + data)  # show in terminal
+    while written_count < WRITE_COUNT:  # message.lower().strip() != "bye":
 
-        message = input(" -> ")  # again take input
+        sleep(3)
 
-    client_socket.close()  # close the connection
+        # Create and send request message
+        message = format_message(MessageType.REQUEST, PROCESS_ID)
+        print("Sending request message...")
+        client_socket.send(message)  # send message
+
+        # Wait for grant message response
+        grant_message = format_message(MessageType.GRANT, PROCESS_ID)
+        response = None
+        while response != grant_message:
+            response = client_socket.recv(3).decode()  # receive response
+            print("Received from server: " + response)  # show in terminal
+
+        # Access granted
+        print("Access granted!")
+        print("Writing to file...")
+
+        # Write current date and process ID to the file
+        with open("resultado.txt", "a") as file:
+            current_time = datetime.now()
+            current_time_ms = current_time.time()
+            line = f"[{PROCESS_ID}] {current_time_ms}"
+            file.write(line)
+
+            # Wait some time before releasing the file
+            sleep(3)
+
+        # Send release message
+        release_message = format_message(MessageType.RELEASE, PROCESS_ID)
+        client_socket.send(release_message)
+        written_count += 1
+
+        # Wait some time before restarting the process
+        sleep_time = random.randint(1, 5)
+        print(f"Sleeping for {sleep_time} seconds...")
+        sleep(sleep_time)
+
+    # Close the connection
+    client_socket.close()
 
 
 if __name__ == "__main__":
