@@ -1,13 +1,15 @@
 from enum import IntEnum
 
+MESSAGE_LENGTH = 10
+
+WRITE_COUNT = 5
+PROCESS_COUNT = 3
+
 
 class MessageType(IntEnum):
     REQUEST = 1
     GRANT = 2
     RELEASE = 3
-
-
-WRITE_COUNT = 5
 
 
 def format_message(message_type: MessageType, process_id: int):

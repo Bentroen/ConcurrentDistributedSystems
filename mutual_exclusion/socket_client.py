@@ -4,7 +4,12 @@ import socket
 from datetime import datetime
 from time import sleep
 
-from mutual_exclusion.util import WRITE_COUNT, MessageType, format_message
+from mutual_exclusion.util import (
+    MESSAGE_LENGTH,
+    WRITE_COUNT,
+    MessageType,
+    format_message,
+)
 
 PROCESS_ID = os.getpid()
 
@@ -30,10 +35,10 @@ def client_program():
         client_socket.send(message)  # send message
 
         # Wait for grant message response
-        grant_message = format_message(MessageType.GRANT, PROCESS_ID)
+        grant_message = format_message(MessageType.GRANT, PROCESS_ID).decode()
         response = None
         while response != grant_message:
-            response = client_socket.recv(3).decode()  # receive response
+            response = client_socket.recv(MESSAGE_LENGTH).decode()  # receive response
             print("Received from server: " + response)  # show in terminal
 
         # Access granted
@@ -45,12 +50,13 @@ def client_program():
             current_time = datetime.now()
             current_time_ms = current_time.time()
             line = f"[{PROCESS_ID}] {current_time_ms}"
-            file.write(line)
+            file.write(line + "\n")
 
             # Wait some time before releasing the file
             sleep(3)
 
         # Send release message
+        print("Done writing. Sending release message...")
         release_message = format_message(MessageType.RELEASE, PROCESS_ID)
         client_socket.send(release_message)
         written_count += 1

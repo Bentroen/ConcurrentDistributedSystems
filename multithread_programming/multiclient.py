@@ -1,5 +1,6 @@
-from client import client_process
 import multiprocessing
+
+from client import client_process
 
 NUM_CLIENTS = 4
 
