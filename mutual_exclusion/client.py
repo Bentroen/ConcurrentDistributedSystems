@@ -1,8 +1,13 @@
+import logging
 import os
 import random
 import socket
 from datetime import datetime
 from time import sleep
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
 
 from mutual_exclusion.util import (
     MESSAGE_LENGTH,
@@ -23,7 +28,7 @@ def client_program():
 
     written_count = 0
 
-    print("Process started with ID:", PROCESS_ID)
+    logger.debug("Process started with ID: %s", PROCESS_ID)
 
     while written_count < WRITE_COUNT:  # message.lower().strip() != "bye":
 
@@ -31,7 +36,7 @@ def client_program():
 
         # Create and send request message
         message = format_message(MessageType.REQUEST, PROCESS_ID)
-        print("Sending request message...")
+        logger.debug("Sending request message...")
         client_socket.send(message)  # send message
 
         # Wait for grant message response
@@ -39,11 +44,11 @@ def client_program():
         response = None
         while response != grant_message:
             response = client_socket.recv(MESSAGE_LENGTH).decode()  # receive response
-            print("Received from server: " + response)  # show in terminal
+            logger.debug("Received from server: %s", response)  # show in terminal
 
         # Access granted
-        print("Access granted!")
-        print("Writing to file...")
+        logger.debug("Access granted!")
+        logger.debug("Writing to file...")
 
         # Write current date and process ID to the file
         with open("resultado.txt", "a") as file:
@@ -56,14 +61,14 @@ def client_program():
             sleep(3)
 
         # Send release message
-        print("Done writing. Sending release message...")
+        logger.debug("Done writing. Sending release message...")
         release_message = format_message(MessageType.RELEASE, PROCESS_ID)
         client_socket.send(release_message)
         written_count += 1
 
         # Wait some time before restarting the process
         sleep_time = random.randint(1, 5)
-        print(f"Sleeping for {sleep_time} seconds...")
+        logger.debug(f"Sleeping for {sleep_time} seconds...")
         sleep(sleep_time)
 
     # Close the connection

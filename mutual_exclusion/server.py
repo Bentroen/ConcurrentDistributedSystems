@@ -30,7 +30,7 @@ def coordinator(
 ):
     # Process requests in the requests list
 
-    print("[Coordinator] Coordinator thread started")
+    logger.debug("[Coordinator] Coordinator thread started")
 
     status = CoordinatorThreadState.IDLE
 
@@ -43,10 +43,10 @@ def coordinator(
 
             # Get the first release from the list
             proc_id = release_queue.get()
-            print("[Coordinator] Received release from process", proc_id)
+            logger.debug("[Coordinator] Received release from process %s", proc_id)
 
             # Return to the idle state
-            print("[Coordinator] Returning to idle state")
+            logger.debug("[Coordinator] Returning to idle state")
             status = CoordinatorThreadState.IDLE
 
         elif status == CoordinatorThreadState.IDLE:
@@ -58,9 +58,9 @@ def coordinator(
             proc_id, conn = requests_queue.get()  # block=True
 
             # Send a grant message to the requesting process
-            print("[Coordinator] Received request from process", proc_id)
+            logger.debug("[Coordinator] Received request from process %s", proc_id)
             grant_message = format_message(MessageType.GRANT, int(proc_id))
-            print("[Coordinator] Sending grant to process", proc_id)
+            logger.debug("[Coordinator] Sending grant to process %s", proc_id)
 
             # Increase process grant count
             proc_id = int(proc_id)
@@ -71,7 +71,7 @@ def coordinator(
             status = CoordinatorThreadState.BUSY
             conn.send(grant_message)
             logger.info("SEND %s", grant_message.decode())
-            print("[Coordinator] Grant sent to process", proc_id)
+            logger.debug("[Coordinator] Grant sent to process %s", proc_id)
 
 
 def process_listener(
@@ -82,27 +82,27 @@ def process_listener(
     while True:
         data = conn.recv(MESSAGE_LENGTH).decode()
         if not data:
-            print("Connection closed with client:", address)
+            logger.debug("Connection closed with client: %s", address)
             break
         logger.info("RECV %s", data)
-        print(f"From {address}: {str(data)}")
+        logger.debug(f"From {address}: {str(data)}")
 
         # Check if the message is a request and add it to the requests list
         message_type, proc_id, _ = data.split("|")
-        print("Received message from process", proc_id)
+        logger.debug("Received message from process %s", proc_id)
 
         if message_type == str(MessageType.REQUEST.value):
-            print("Adding request to the queue")
+            logger.debug("Adding request to the queue")
             requests_queue.put((proc_id, conn))
 
         elif message_type == str(MessageType.RELEASE.value):
-            print("Received release message from process", proc_id)
+            logger.debug("Received release message from process %s", proc_id)
             release_queue.put(proc_id)
     conn.close()
 
 
 def ui(grants_per_process: dict[int, int], requests_queue: Queue):
-    print("UI thread started")
+    logger.debug("UI thread started")
 
     print("1. Print current request list")
     print("2. Print grants per process")
@@ -129,7 +129,7 @@ def server_program():
     server_socket.bind((host, port))
     server_socket.listen(5)
 
-    print("Server process started!")
+    logger.debug("Server process started!")
 
     connections = []
     requests_queue = Queue(maxsize=10)
@@ -148,9 +148,9 @@ def server_program():
 
     # Accept connections from multiple clients
     while True:
-        print("Waiting for connection...")
+        logger.debug("Waiting for connection...")
         conn, address = server_socket.accept()
-        print("Got connection from:", address)
+        logger.debug("Got connection from: %s", address)
         connections.append(conn)
 
         # Create a new thread to handle the client
