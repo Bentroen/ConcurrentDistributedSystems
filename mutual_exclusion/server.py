@@ -1,6 +1,7 @@
 import logging
 import os
 import socket
+import sys
 import threading
 from queue import Queue
 
@@ -22,7 +23,11 @@ class CoordinatorThreadState:
     BUSY = 2  # There's a process in the critical section
 
 
-def coordinator(requests_queue: list[str], release_queue: list[str]):
+def coordinator(
+    requests_queue: list[str],
+    release_queue: list[str],
+    grants_per_process: dict[int, int],
+):
     # Process requests in the requests list
 
     print("[Coordinator] Coordinator thread started")
@@ -56,6 +61,13 @@ def coordinator(requests_queue: list[str], release_queue: list[str]):
             print("[Coordinator] Received request from process", proc_id)
             grant_message = format_message(MessageType.GRANT, int(proc_id))
             print("[Coordinator] Sending grant to process", proc_id)
+
+            # Increase process grant count
+            proc_id = int(proc_id)
+            if proc_id not in grants_per_process:
+                grants_per_process[proc_id] = 0
+            grants_per_process[proc_id] += 1
+
             status = CoordinatorThreadState.BUSY
             conn.send(grant_message)
             logger.info("SEND %s", grant_message.decode())
@@ -89,6 +101,26 @@ def process_listener(
     conn.close()
 
 
+def ui(grants_per_process: dict[int, int], requests_queue: Queue):
+    print("UI thread started")
+
+    print("1. Print current request list")
+    print("2. Print grants per process")
+    print("3. Exit the program")
+
+    while True:
+        command = input("Enter a command: ")
+        if command == "1":
+            print("Current request list:", requests_queue.queue)
+        elif command == "2":
+            print("Grants per process:", grants_per_process)
+        elif command == "3":
+            print("Bye!")
+            sys.exit(0)
+        else:
+            print("Invalid command")
+
+
 def server_program():
     host = socket.gethostname()
     port = 5000
@@ -102,11 +134,17 @@ def server_program():
     connections = []
     requests_queue = Queue(maxsize=10)
     release_queue = Queue(maxsize=10)
+    grants_per_process: dict[int, int] = {}
 
+    # Start coordinator thread
     coordinator_thread = threading.Thread(
-        target=coordinator, args=(requests_queue, release_queue)
+        target=coordinator, args=(requests_queue, release_queue, grants_per_process)
     )
     coordinator_thread.start()
+
+    # Start UI thread
+    ui_thread = threading.Thread(target=ui, args=(grants_per_process, requests_queue))
+    ui_thread.start()
 
     # Accept connections from multiple clients
     while True:
