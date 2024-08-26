@@ -2,26 +2,21 @@ import os
 from multiprocessing import Process
 
 from mutual_exclusion.client import client_program
-from mutual_exclusion.server import server_program
-from mutual_exclusion.util import PROCESS_COUNT
 
 PROCESS_ID = os.getpid()
 
+NUM_WORKERS = 5
+
 
 def main():
-    # Create the coordinator process
-    coordinator = Process(target=server_program, args=())
-    coordinator.start()
-
     # Create three worker processes
     workers = []
-    for _ in range(PROCESS_COUNT):
+    for _ in range(NUM_WORKERS):
         worker = Process(target=client_program, args=())
         workers.append(worker)
         worker.start()
 
     # Wait for the coordinator and workers to finish
-    coordinator.join()
     for worker in workers:
         worker.join()
 

@@ -2,8 +2,7 @@ from enum import IntEnum
 
 MESSAGE_LENGTH = 10
 
-WRITE_COUNT = 5
-PROCESS_COUNT = 3
+WRITE_COUNT = 3
 
 
 class MessageType(IntEnum):

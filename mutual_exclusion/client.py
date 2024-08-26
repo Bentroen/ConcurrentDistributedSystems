@@ -2,11 +2,19 @@ import logging
 import os
 import random
 import socket
+import sys
 from datetime import datetime
 from time import sleep
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+# Print log to stdout
+ch = logging.StreamHandler(sys.stdout)
+ch.setLevel(logging.DEBUG)
+formatter = logging.Formatter("[%(asctime)s] [%(process)d] %(message)s")
+ch.setFormatter(formatter)
+logger.addHandler(ch)
 
 
 from mutual_exclusion.util import (
@@ -30,9 +38,9 @@ def client_program():
 
     logger.debug("Process started with ID: %s", PROCESS_ID)
 
-    while written_count < WRITE_COUNT:  # message.lower().strip() != "bye":
+    sleep(3)
 
-        sleep(3)
+    while written_count < WRITE_COUNT:  # message.lower().strip() != "bye":
 
         # Create and send request message
         message = format_message(MessageType.REQUEST, PROCESS_ID)

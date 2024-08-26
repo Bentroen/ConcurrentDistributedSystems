@@ -74,7 +74,7 @@ def coordinator(
             logger.debug("[Coordinator] Grant sent to process %s", proc_id)
 
 
-def process_listener(
+def process_handler(
     conn: socket.socket, address: str, requests_queue: Queue, release_queue: Queue
 ):
     # Listens for incoming messages from the connected client (recv)
@@ -101,24 +101,50 @@ def process_listener(
     conn.close()
 
 
+def process_listener(
+    server_socket: socket.socket,
+    connections: list[socket.socket],
+    requests_queue: Queue,
+    release_queue: Queue,
+):
+    while True:
+        logger.debug("Waiting for connection...")
+        conn, address = server_socket.accept()
+        logger.debug("Got connection from: %s", address)
+        connections.append(conn)
+
+        # Create a new thread to handle the client
+        client_thread = threading.Thread(
+            target=process_handler, args=(conn, address, requests_queue, release_queue)
+        )
+        client_thread.start()
+
+
 def ui(grants_per_process: dict[int, int], requests_queue: Queue):
     logger.debug("UI thread started")
 
-    print("1. Print current request list")
-    print("2. Print grants per process")
-    print("3. Exit the program")
+    print("| 1. Print current request list")
+    print("| 2. Print grants per process")
+    print("| 3. Exit the program\n")
 
     while True:
         command = input("Enter a command: ")
+        print("\n")
         if command == "1":
-            print("Current request list:", requests_queue.queue)
+            print(
+                "Current request list:\n",
+                [int(request[0]) for request in requests_queue.queue],
+            )
         elif command == "2":
-            print("Grants per process:", grants_per_process)
+            print("Grants per process:")
+            for proc_id, grant_count in grants_per_process.items():
+                print(f"  Process {proc_id}: {grant_count} grants")
         elif command == "3":
             print("Bye!")
-            sys.exit(0)
+            os._exit(0)
         else:
             print("Invalid command")
+        print("\n")
 
 
 def server_program():
@@ -142,22 +168,15 @@ def server_program():
     )
     coordinator_thread.start()
 
-    # Start UI thread
-    ui_thread = threading.Thread(target=ui, args=(grants_per_process, requests_queue))
-    ui_thread.start()
+    # Start listener thread to accept incoming connections
+    listener_thread = threading.Thread(
+        target=process_listener,
+        args=(server_socket, connections, requests_queue, release_queue),
+    )
+    listener_thread.start()
 
-    # Accept connections from multiple clients
-    while True:
-        logger.debug("Waiting for connection...")
-        conn, address = server_socket.accept()
-        logger.debug("Got connection from: %s", address)
-        connections.append(conn)
-
-        # Create a new thread to handle the client
-        client_thread = threading.Thread(
-            target=process_listener, args=(conn, address, requests_queue, release_queue)
-        )
-        client_thread.start()
+    # Start main UI logic
+    ui(grants_per_process, requests_queue)
 
 
 def clear_result():
