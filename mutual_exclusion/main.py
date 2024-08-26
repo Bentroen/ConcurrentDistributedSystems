@@ -1,31 +1,22 @@
-# Spawn the coordinator process and three worker processes
-
 import os
-from datetime import datetime
-from multiprocessing import Process, Queue
-from threading import Thread
-from time import sleep
+from multiprocessing import Process
 
-from mutual_exclusion.coordinator import main as coordinator_loop
-from mutual_exclusion.worker import main as worker_loop
+from mutual_exclusion.client import client_program
+from mutual_exclusion.server import server_program
+from mutual_exclusion.util import PROCESS_COUNT
 
 PROCESS_ID = os.getpid()
 
-NUM_WORKERS = 3
-
 
 def main():
-    # Create a queue to communicate with the coordinator
-    q = Queue()
-
     # Create the coordinator process
-    coordinator = Process(target=coordinator_loop, args=())
+    coordinator = Process(target=server_program, args=())
     coordinator.start()
 
     # Create three worker processes
     workers = []
-    for _ in range(NUM_WORKERS):
-        worker = Process(target=worker_loop, args=())
+    for _ in range(PROCESS_COUNT):
+        worker = Process(target=client_program, args=())
         workers.append(worker)
         worker.start()
 
