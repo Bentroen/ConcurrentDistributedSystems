@@ -69,10 +69,10 @@ def process_listener(
     # and adds it to the requests list
     while True:
         data = conn.recv(MESSAGE_LENGTH).decode()
-        logger.info("RECV %s", data)
         if not data:
             print("Connection closed with client:", address)
             break
+        logger.info("RECV %s", data)
         print(f"From {address}: {str(data)}")
 
         # Check if the message is a request and add it to the requests list
