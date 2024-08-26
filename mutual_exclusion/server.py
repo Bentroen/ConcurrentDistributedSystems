@@ -1,10 +1,20 @@
+import logging
 import os
 import socket
 import threading
 from queue import Queue
-from typing import Tuple
 
 from mutual_exclusion.util import MESSAGE_LENGTH, MessageType, format_message
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+fh = logging.FileHandler("mutual_exclusion.log", "w")
+fh.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter("%(asctime)s - %(message)s")
+fh.setFormatter(formatter)
+logger.addHandler(fh)
 
 
 class CoordinatorThreadState:
@@ -48,6 +58,7 @@ def coordinator(requests_queue: list[str], release_queue: list[str]):
             print("[Coordinator] Sending grant to process", proc_id)
             status = CoordinatorThreadState.BUSY
             conn.send(grant_message)
+            logger.info("SEND %s", grant_message.decode())
             print("[Coordinator] Grant sent to process", proc_id)
 
 
@@ -58,6 +69,7 @@ def process_listener(
     # and adds it to the requests list
     while True:
         data = conn.recv(MESSAGE_LENGTH).decode()
+        logger.info("RECV %s", data)
         if not data:
             print("Connection closed with client:", address)
             break
