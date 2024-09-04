@@ -27,7 +27,7 @@ from mutual_exclusion.util import (
 PROCESS_ID = os.getpid()
 
 
-def client_program():
+def client_program(write_count: int = WRITE_COUNT):
     host = socket.gethostname()  # as both code is running on same pc
     port = 5000  # socket server port number
 
@@ -40,7 +40,7 @@ def client_program():
 
     sleep(3)
 
-    while written_count < WRITE_COUNT:  # message.lower().strip() != "bye":
+    while written_count < write_count:
 
         # Create and send request message
         message = format_message(MessageType.REQUEST, PROCESS_ID)
@@ -75,7 +75,7 @@ def client_program():
         written_count += 1
 
         # Wait some time before restarting the process
-        sleep_time = random.randint(1, 5)
+        sleep_time = random.randint(1, 30)
         logger.debug(f"Sleeping for {sleep_time} seconds...")
         sleep(sleep_time)
 

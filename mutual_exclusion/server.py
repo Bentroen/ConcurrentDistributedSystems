@@ -11,9 +11,12 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 fh = logging.FileHandler("mutual_exclusion.log", "w")
-fh.setLevel(logging.DEBUG)
+fh.setLevel(logging.INFO)
 
-formatter = logging.Formatter("%(asctime)s - %(message)s")
+# fh = logging.FileHandler("mutual_exclusion_full.log", "w")
+# fh.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter("%(levelname)s -  %(asctime)s - %(message)s")
 fh.setFormatter(formatter)
 logger.addHandler(fh)
 
@@ -70,7 +73,7 @@ def coordinator(
 
             status = CoordinatorThreadState.BUSY
             conn.send(grant_message)
-            logger.info("SEND %s", grant_message.decode())
+            logger.info("SEND - GRANT   %s|%s", MessageType.GRANT, proc_id)
             logger.debug("[Coordinator] Grant sent to process %s", proc_id)
 
 
@@ -80,11 +83,12 @@ def process_handler(
     # Listens for incoming messages from the connected client (recv)
     # and adds it to the requests list
     while True:
+
         data = conn.recv(MESSAGE_LENGTH).decode()
         if not data:
             logger.debug("Connection closed with client: %s", address)
             break
-        logger.info("RECV %s", data)
+        # logger.info("RECV %s", data)
         logger.debug(f"From {address}: {str(data)}")
 
         # Check if the message is a request and add it to the requests list
@@ -93,10 +97,12 @@ def process_handler(
 
         if message_type == str(MessageType.REQUEST.value):
             logger.debug("Adding request to the queue")
+            logger.info("RECV - REQUEST %s|%s", message_type, proc_id)
             requests_queue.put((proc_id, conn))
 
         elif message_type == str(MessageType.RELEASE.value):
             logger.debug("Received release message from process %s", proc_id)
+            logger.info("RECV - RELEASE %s|%s", message_type, proc_id)
             release_queue.put(proc_id)
     conn.close()
 
