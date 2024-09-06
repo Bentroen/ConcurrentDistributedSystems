@@ -24,6 +24,11 @@ python3 -m mutual_exclusion.multiclient --workers 5 --writes 3
 
 As opções `--workers` e `--writes` são ambas opcionais e definem, respectivamente, o número de processos clientes que serão criados e o número de escritas que cada cliente fará na região crítica.
 
+O servidor possui uma interface controlada por linha de comando, que permite visualizar a lista de pedidos atendidos, a lista de pedidos atuais e encerrar o servidor. Para acessar a interface, envie um dos seguintes comandos:
+
+- `1`: Imprime a fila de pedidos atual.
+- `2`: Imprime a quantidade de pedidos atendidos por cada processo.
+- `3`: Encerra o servidor.
 
 ## Implementação
 
@@ -99,3 +104,20 @@ Assim, foi decidido que uma nova fila seria criada para receber as mensagens de 
 Uma interface de linha de comando foi disponibilizada para interação com o servidor, permitindo que o usuário visualize a lista de pedidos atendidos e a lista de pedidos atuais, bem como encerre o servidor. No entanto, houve, inicialmente, uma dificuldade em relação ao funcionamento do console de saída no contexto de múltiplas threads.
 
 Como havia outras threads imprimindo linhas no console, não era possível aguardar a entrada do usuário com a função `input`, que gerava um erro. Para solucionar esse problema, os registros de saída do servidor foram redirecionados a um arquivo de log separado, de modo que não ocupassem o console principal. A thread de interface, anteriormente uma thread invocada separadamente pela thread principal, foi movida para que se tornasse a thread principal, com a função de aguardar as conexões de novos processos sendo movida para outra thread.
+
+## Estudo de caso
+
+Para testar a implementação, foi criado um cenário em que 5 processos clientes são criados, cada um realizando 3 escritas no arquivo `resultado.txt`. O servidor foi iniciado e, em seguida, os processos clientes foram iniciados. O resultado foi o esperado: cada processo cliente obteve acesso à região crítica, escreveu no arquivo e liberou o acesso, permitindo que o próximo processo na fila obtivesse acesso.
+
+Para criar um cenário mais interessante, cada processo fica ocioso por um tempo aleatório entre 1 e 30 segundos após terminar a escrita, antes que solicite o acesso novamente. Isso permite que outros processos solicitem acesso à região crítica enquanto um processo está ocioso, demonstrando que o servidor é capaz de gerenciar corretamente a fila de acesso.
+
+Ao enviar os comandos 1 e 2 para o servidor através da interface de linha de comando, é possível verificar que a fila de pedidos atuais e a lista de pedidos atendidos estão corretas: a fila de pedidos atuais contém os processos que estão aguardando acesso à região crítica, e a lista de pedidos atendidos mostra quantas vezes cada processo já acessou a região crítica.
+
+Para verificar que o acesso à região crítica estava sendo gerenciado corretamente, foi feita uma análise do arquivo `resultado.txt`. O arquivo continha as 15 escritas esperadas, uma de cada processo cliente, e as escritas estavam ordenadas de acordo com a ordem de chegada dos processos.
+
+Ainda, foi possível verificar no arquivo `mutual_exclusion.log` que o servidor gerencia corretamente as filas de acesso e liberação, e que o acesso à região crítica é concedido de acordo com a ordem de chegada dos processos; isto é, cada mensagem de GRANT ocorre apenas após uma mensagem de REQUEST do processo correspondente, e cada mensagem de RELEASE ocorre apenas após uma mensagem de GRANT. Por fim, as mensagens de GRANT e RELEASE são intercaladas, indicando que o servidor gerencia corretamente o acesso à região crítica.
+
+## Conclusão
+
+Este trabalho apresentou uma implementação do algoritmo de exclusão mútua para gerenciamento de acesso à região crítica por vários processos. A implementação foi feita em Python e utilizou a biblioteca `threading` para criação de threads, bem como sockets para comunicação entre os processos.
+
